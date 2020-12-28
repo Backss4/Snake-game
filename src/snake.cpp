@@ -128,45 +128,45 @@ bool CSnake::handleGameEvent(int key) {
   if (player_input.empty()) {
     if ((key == KEY_UP || lower_key == 'w') && direction != down &&
         direction != up) {
-      player_input.push({snake.front(), up});
+      player_input.push(up);
       return true;
     }
     if ((key == KEY_DOWN || lower_key == 's') && direction != up &&
         direction != down) {
-      player_input.push({snake.front(), down});
+      player_input.push(down);
       return true;
     }
     if ((key == KEY_LEFT || lower_key == 'a') && direction != right &&
         direction != left) {
-      player_input.push({snake.front(), left});
+      player_input.push(left);
       return true;
     }
     if ((key == KEY_RIGHT || lower_key == 'd') && direction != left &&
         direction != right) {
-      player_input.push({snake.front(), up});
+      player_input.push(right);
       return true;
     }
   } else {
     // get last move
-    const std::pair<CPoint, _direction> &last_move = player_input.back();
-    if ((key == KEY_UP || lower_key == 'w') && last_move.second != down &&
-        last_move.second != up) {
-      player_input.push({snake.front(), up});
+    const _direction &last_move = player_input.back();
+    if ((key == KEY_UP || lower_key == 'w') && last_move != down &&
+        last_move != up) {
+      player_input.push(up);
       return true;
     }
-    if ((key == KEY_DOWN || lower_key == 's') && last_move.second != up &&
-        last_move.second != down) {
-      player_input.push({snake.front(), down});
+    if ((key == KEY_DOWN || lower_key == 's') && last_move != up &&
+        last_move != down) {
+      player_input.push(down);
       return true;
     }
-    if ((key == KEY_LEFT || lower_key == 'a') && last_move.second != right &&
-        last_move.second != left) {
-      player_input.push({snake.front(), left});
+    if ((key == KEY_LEFT || lower_key == 'a') && last_move != right &&
+        last_move != left) {
+      player_input.push(left);
       return true;
     }
-    if ((key == KEY_RIGHT || lower_key == 'd') && last_move.second != left &&
-        last_move.second != right) {
-      player_input.push({snake.front(), up});
+    if ((key == KEY_RIGHT || lower_key == 'd') && last_move != left &&
+        last_move != right) {
+      player_input.push(right);
       return true;
     }
   }
@@ -252,10 +252,58 @@ bool CSnake::startGame() {
   snake.push_front(CPoint(geom.topleft.x + 3, geom.topleft.y + 2));
   direction = right;
   state = in_game;
+  tic_timer = std::time(nullptr);
   return true;
 }
 
-bool CSnake::ticGame() { return true; }
+bool CSnake::ticGame() {
+  if(std::time(nullptr) - tic_timer < 1)
+      return false;
+  
+  auto head = snake.begin();
+  // get next move
+  _direction dir = direction;
+  CPoint new_pos = *head;
+  //if we have player input get next move and pop
+  if (!player_input.empty()) {
+    dir = player_input.front();
+    player_input.pop();
+  }
+  switch (dir) {
+  case up:
+    *head += CPoint(0, -1);
+    break;
+  case down:
+    *head += CPoint(0, 1);
+    break;
+  case right:
+    *head += CPoint(1, 0);
+    break;
+  case left:
+    *head += CPoint(-1, 0);
+    break;
+  };
+  // update direction
+  direction = dir;
+  
+  // check end game
+  for (auto it = std::next(head); it != snake.cend(); it++) {
+    if (head->x == it->x && head->y == it->y) {
+      state = end_game;
+      return true;
+    }
+  }
+  
+  //move tail
+  for (auto it = std::next(head); it != snake.end(); it++) {
+    CPoint temp = *it;
+    *it = new_pos;
+    new_pos = temp;
+  }
+
+  tic_timer = std::time(nullptr);
+  return true;
+}
 
 bool CSnake::resumeGame() {
   state = in_game;

@@ -6,12 +6,14 @@
 #include <queue>
 #include <list>
 #include <cmath>
+#include <ctime>
+#include <iterator>
 #include "winsys.h"
 #include "cpoint.h"
 #include "screen.h"
 
 class CSnake:public CFramedWindow
-{
+{	
 	enum _states {
 		home_screen = 0,
 		game_paused,
@@ -26,6 +28,9 @@ class CSnake:public CFramedWindow
 		down,
 	};
 	
+	typedef typename std::list<CPoint>::iterator list_iterator;
+	typedef typename std::list<CPoint>::const_iterator const_list_iterator;
+	
 	size_t level = 1;
 	_states old_state = home_screen;
 	_states state = home_screen;
@@ -33,10 +38,13 @@ class CSnake:public CFramedWindow
 	CPoint foodPos;
 	
 	//snake nodes
-	list<CPoint> snake;
+	std::list<CPoint> snake;
 	
 	//player inputs
-	queue<pair<CPoint, _direction>> player_input;
+	std::queue<_direction> player_input;
+	
+	//timer for ticGame
+	std::time_t tic_timer;
 	
 	//screens
 	void paintLevelBar();
