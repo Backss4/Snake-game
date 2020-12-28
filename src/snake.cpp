@@ -17,6 +17,7 @@ void CSnake::paint() {
     paintPauseScreen();
     break;
   case in_game:
+    paintGameScreen();
     break;
   // end game state
   case end_game:
@@ -27,7 +28,25 @@ void CSnake::paint() {
 
 void CSnake::paintLevelBar() {
   gotoyx(geom.topleft.y - 1, geom.topleft.x);
-  printl("|LEVEL: %d| |STATE: %d|", level, state);
+  printl("|LEVEL: %d| |STATE: %d| |SIZE: %d|", level, state, snake.size());
+}
+
+void CSnake::paintGameScreen() {
+  for (int y = geom.topleft.y + 1; y < geom.topleft.y + geom.size.y - 1; y++) {
+    for (int x = geom.topleft.x + 1; x < geom.topleft.x + geom.size.x - 1;
+         x++) {
+      auto begin = snake.cbegin();
+      gotoyx(geom.topleft.y - 2, geom.topleft.x);
+      printl("X Y: %d %d | HEAD X Y: %d %d", x, y, begin->x, begin->y);
+      gotoyx(y, x);
+      char c = ' ';
+      for (auto it = begin; it != snake.cend(); it++) {
+        if (it->x == x && it->y == y)
+          c = it == begin ? '*' : '+';
+      }
+      printl("%c", c);
+    }
+  }
 }
 
 void CSnake::paintHelpScreen() {
@@ -100,19 +119,59 @@ bool CSnake::handleGameEvent(int key) {
     return true;
   }
   if (lower_key == 'r') {
+    gotoyx(geom.topleft.y + geom.size.y / 2 - 1,
+           geom.topleft.x + geom.size.x / 2 - 7);
+    printl("GAME RESTARTED");
     state = home_screen;
     return true;
   }
-  if ((key == KEY_UP || lower_key == 'w') && direction != down)
-    return true;
-  if ((key == KEY_DOWN || lower_key == 's') && direction != up)
-    return true;
-  if ((key == KEY_LEFT || lower_key == 'a') && direction != right)
-    return true;
-  if ((key == KEY_RIGHT || lower_key == 'd') && direction != left)
-    return true;
+  if (player_input.empty()) {
+    if ((key == KEY_UP || lower_key == 'w') && direction != down &&
+        direction != up) {
+      player_input.push({snake.front(), up});
+      return true;
+    }
+    if ((key == KEY_DOWN || lower_key == 's') && direction != up &&
+        direction != down) {
+      player_input.push({snake.front(), down});
+      return true;
+    }
+    if ((key == KEY_LEFT || lower_key == 'a') && direction != right &&
+        direction != left) {
+      player_input.push({snake.front(), left});
+      return true;
+    }
+    if ((key == KEY_RIGHT || lower_key == 'd') && direction != left &&
+        direction != right) {
+      player_input.push({snake.front(), up});
+      return true;
+    }
+  } else {
+    // get last move
+    const std::pair<CPoint, _direction> &last_move = player_input.back();
+    if ((key == KEY_UP || lower_key == 'w') && last_move.second != down &&
+        last_move.second != up) {
+      player_input.push({snake.front(), up});
+      return true;
+    }
+    if ((key == KEY_DOWN || lower_key == 's') && last_move.second != up &&
+        last_move.second != down) {
+      player_input.push({snake.front(), down});
+      return true;
+    }
+    if ((key == KEY_LEFT || lower_key == 'a') && last_move.second != right &&
+        last_move.second != left) {
+      player_input.push({snake.front(), left});
+      return true;
+    }
+    if ((key == KEY_RIGHT || lower_key == 'd') && last_move.second != left &&
+        last_move.second != right) {
+      player_input.push({snake.front(), up});
+      return true;
+    }
+  }
 
-  return false;
+  return ticGame();
 }
 
 bool CSnake::handleEndGameEvent(int key) {
@@ -123,37 +182,82 @@ bool CSnake::handleEndGameEvent(int key) {
     return true;
   }
   if (lower_key == 'r') {
-    // startGame();
-    return true;
+    return startGame();
   }
 
-  return CFramedWindow::handleEvent(key);
+  return handleWindowMoveEvent(key);
 }
 
 bool CSnake::handleHomeScreenEvent(int key) {
-  if (key == 'S' || key == 's') {
-    // startGame();
-    return true;
+  const int lower_key = tolower(key);
+  if (lower_key == 's') {
+    return startGame();
   }
 
-  return CFramedWindow::handleEvent(key);
+  return handleWindowMoveEvent(key);
 }
 
 bool CSnake::handlePauseScreenEvent(int key) {
   const int lower_key = tolower(key);
   old_state = game_paused;
   if (lower_key == 'p' || lower_key == 'h') {
-    // resumeGame();
-    return true;
+    return resumeGame();
   }
 
   if (lower_key == 'r') {
     gotoyx(geom.topleft.y + geom.size.y / 2 - 1,
            geom.topleft.x + geom.size.x / 2 - 7);
     printl("GAME RESTARTED");
-    // startGame();
+    return startGame();
+  }
+
+  return handleWindowMoveEvent(key);
+}
+
+bool CSnake::handleWindowMoveEvent(int key) {
+  if (CFramedWindow::handleEvent(key)) {
+    CPoint delta;
+    switch (key) {
+    case KEY_UP:
+      delta = CPoint(0, -1);
+      break;
+    case KEY_DOWN:
+      delta = CPoint(0, 1);
+      break;
+    case KEY_RIGHT:
+      delta = CPoint(1, 0);
+      break;
+    case KEY_LEFT:
+      delta = CPoint(-1, 0);
+      break;
+    };
+    for (auto it = snake.begin(); it != snake.end(); it++) {
+      *it += delta;
+    }
+
     return true;
   }
 
-  return CFramedWindow::handleEvent(key);
+  return false;
+}
+
+/*
+ * Game logic
+ */
+
+bool CSnake::startGame() {
+  if (!snake.empty())
+    snake.clear();
+  snake.push_front(CPoint(geom.topleft.x + 2, geom.topleft.y + 2));
+  snake.push_front(CPoint(geom.topleft.x + 3, geom.topleft.y + 2));
+  direction = right;
+  state = in_game;
+  return true;
+}
+
+bool CSnake::ticGame() { return true; }
+
+bool CSnake::resumeGame() {
+  state = in_game;
+  return true;
 }

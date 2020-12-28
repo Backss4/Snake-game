@@ -28,12 +28,19 @@ class CSnake:public CFramedWindow
 	
 	size_t level = 1;
 	_states old_state = home_screen;
-	_states state = in_game;
+	_states state = home_screen;
 	_direction direction = stop;
 	CPoint foodPos;
 	
+	//snake nodes
+	list<CPoint> snake;
+	
+	//player inputs
+	queue<pair<CPoint, _direction>> player_input;
+	
 	//screens
 	void paintLevelBar();
+	void paintGameScreen();
 	void paintHomeScreen();
 	void paintHelpScreen();
 	void paintPauseScreen();
@@ -44,6 +51,12 @@ class CSnake:public CFramedWindow
 	bool handleEndGameEvent(int key);
 	bool handleHomeScreenEvent(int key);
 	bool handlePauseScreenEvent(int key);
+	bool handleWindowMoveEvent(int key);
+	
+	//game logic
+	bool startGame();
+	bool ticGame();
+	bool resumeGame();
 public:
   CSnake(CRect r, char _c = ' ') : CFramedWindow(r, _c) {};
   void paint();
