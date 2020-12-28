@@ -7,6 +7,7 @@
 #include <list>
 #include <cmath>
 #include <ctime>
+#include <random>
 #include <iterator>
 #include "winsys.h"
 #include "cpoint.h"
@@ -28,14 +29,15 @@ class CSnake:public CFramedWindow
 		down,
 	};
 	
-	typedef typename std::list<CPoint>::iterator list_iterator;
-	typedef typename std::list<CPoint>::const_iterator const_list_iterator;
-	
 	size_t level = 1;
 	_states old_state = home_screen;
 	_states state = home_screen;
 	_direction direction = stop;
 	CPoint foodPos;
+	
+	//random
+	std::random_device rd;
+	std::mt19937 generator;
 	
 	//snake nodes
 	std::list<CPoint> snake;
@@ -65,8 +67,9 @@ class CSnake:public CFramedWindow
 	bool startGame();
 	bool ticGame();
 	bool resumeGame();
+	void generateFood();
 public:
-  CSnake(CRect r, char _c = ' ') : CFramedWindow(r, _c) {};
+  CSnake(CRect r, char _c = ' ') : CFramedWindow(r, _c), generator(rd()) {};
   void paint();
   bool handleEvent(int key);
 };

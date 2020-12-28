@@ -40,6 +40,8 @@ void CSnake::paintGameScreen() {
       printl("X Y: %d %d | HEAD X Y: %d %d", x, y, begin->x, begin->y);
       gotoyx(y, x);
       char c = ' ';
+      if(foodPos.x == x && foodPos.y == y)
+          c= 'o';
       for (auto it = begin; it != snake.cend(); it++) {
         if (it->x == x && it->y == y)
           c = it == begin ? '*' : '+';
@@ -248,11 +250,13 @@ bool CSnake::handleWindowMoveEvent(int key) {
 bool CSnake::startGame() {
   if (!snake.empty())
     snake.clear();
-  snake.push_front(CPoint(geom.topleft.x + 2, geom.topleft.y + 2));
-  snake.push_front(CPoint(geom.topleft.x + 3, geom.topleft.y + 2));
+  for(size_t i = 2; i < 5; i++) {
+	 snake.push_front(CPoint(geom.topleft.x + i, geom.topleft.y + 2)); 
+  }
   direction = right;
-  state = in_game;
   tic_timer = std::time(nullptr);
+  generateFood();
+  state = in_game;
   return true;
 }
 
@@ -261,30 +265,34 @@ bool CSnake::ticGame() {
       return false;
   
   auto head = snake.begin();
-  // get next move
-  _direction dir = direction;
   CPoint new_pos = *head;
   //if we have player input get next move and pop
   if (!player_input.empty()) {
-    dir = player_input.front();
+    direction = player_input.front();
     player_input.pop();
   }
-  switch (dir) {
+  switch (direction) {
   case up:
-    *head += CPoint(0, -1);
+    new_pos += CPoint(0, -1);
     break;
   case down:
-    *head += CPoint(0, 1);
+    new_pos += CPoint(0, 1);
     break;
   case right:
-    *head += CPoint(1, 0);
+    new_pos += CPoint(1, 0);
     break;
   case left:
-    *head += CPoint(-1, 0);
+    new_pos += CPoint(-1, 0);
     break;
   };
-  // update direction
-  direction = dir;
+  
+  //we have next pos of head here
+  if(new_pos.x == foodPos.x && new_pos.y == foodPos.y) {
+	  snake.push_front(new_pos);
+	  generateFood();
+  } else {
+	  std::swap(*head, new_pos);
+  }
   
   // check end game
   for (auto it = std::next(head); it != snake.cend(); it++) {
@@ -308,4 +316,18 @@ bool CSnake::ticGame() {
 bool CSnake::resumeGame() {
   state = in_game;
   return true;
+}
+
+void CSnake::generateFood() {
+	CPoint new_pos(geom.topleft.x + 4, geom.topleft.y + 6);
+gen:
+	/*new_pos.x = geom.topleft.x + geom.size.x / 2;
+	new_pos.y = geom.topleft.y + geom.size.y / 2;*/
+	for(auto it = snake.cbegin(); it != snake.cend(); it++) {
+		if(it->x == new_pos.x && it->y == new_pos.y) {
+		    new_pos.x = geom.topleft.x + geom.size.x / 2;
+			new_pos.y = geom.topleft.y + geom.size.y / 2;
+		}
+	}
+	foodPos = new_pos;
 }
