@@ -3,6 +3,8 @@
 
 #include <cctype>
 #include <string>
+#include <queue>
+#include <list>
 #include <cmath>
 #include "winsys.h"
 #include "cpoint.h"
@@ -25,8 +27,8 @@ class CSnake:public CFramedWindow
 	};
 	
 	size_t level = 1;
-	_states oldState = home_screen;
-	_states state = home_screen;
+	_states old_state = home_screen;
+	_states state = in_game;
 	_direction direction = stop;
 	CPoint foodPos;
 	
@@ -39,6 +41,7 @@ class CSnake:public CFramedWindow
 	
 	//handling events
 	bool handleGameEvent(int key);
+	bool handleEndGameEvent(int key);
 	bool handleHomeScreenEvent(int key);
 	bool handlePauseScreenEvent(int key);
 public:
