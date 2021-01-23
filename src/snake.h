@@ -9,6 +9,7 @@
 #include <ctime>
 #include <random>
 #include <iterator>
+#include <chrono>
 #include "winsys.h"
 #include "cpoint.h"
 #include "screen.h"
@@ -36,8 +37,7 @@ class CSnake:public CFramedWindow
 	CPoint foodPos;
 	
 	//random
-	std::random_device rd;
-	std::mt19937 generator;
+	std::mt19937 generator{std::random_device{}()};
 	
 	//snake nodes
 	std::list<CPoint> snake;
@@ -61,17 +61,18 @@ class CSnake:public CFramedWindow
 	bool handleEndGameEvent(int key);
 	bool handleHomeScreenEvent(int key);
 	bool handlePauseScreenEvent(int key);
-	bool handleWindowMoveEvent(int key);
 	
 	//game logic
 	bool startGame();
 	bool ticGame();
 	bool resumeGame();
 	void generateFood();
+	
 public:
-  CSnake(CRect r, char _c = ' ') : CFramedWindow(r, _c), generator(rd()) {};
+  CSnake(CRect r, char _c = ' ') : CFramedWindow(r, _c) {};
   void paint();
   bool handleEvent(int key);
+  void move (const CPoint & delta);
 };
 
 #endif
