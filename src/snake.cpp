@@ -178,7 +178,7 @@ bool CSnake::handlePauseScreenEvent(int key) {
 }
 
 void CSnake::move(const CPoint &delta) {
-  CView::move(delta);
+  CFramedWindow::move(delta);
   for (auto it = snake.begin(); it != snake.end(); it++) {
     *it += delta;
   }
