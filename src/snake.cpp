@@ -126,7 +126,6 @@ bool CSnake::handleGameEvent(int key) {
   }
 
   const _direction dir = player_input.empty() ? direction : player_input.back();
-  _direction new_direction = static_cast<_direction>(-1);
   if ((key == KEY_UP || lower_key == 'w') && dir != down) {
     player_input.push(up);
   } else if ((key == KEY_DOWN || lower_key == 's') && dir != up) {
@@ -216,8 +215,6 @@ bool CSnake::ticGame() {
   auto y = std::chrono::milliseconds(
                multiplier * level >= 300 ? 300 : multiplier * level)
                .count();
-  gotoyx(0, 0);
-  printl("|%d %d %d|", elapsed_time, x - y, KEY_DOWN);
   bool boost =
       !player_input.empty() && player_input.front() == direction ? true : false;
   if (elapsed_time < x - y && !boost)
