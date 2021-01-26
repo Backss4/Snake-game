@@ -5,8 +5,6 @@
  */
 
 void CSnake::paint() {
-  gotoyx(0, 0);
-  printl("|TUTEJ JEST 0,0|");
   CFramedWindow::paint();
   paintLevelBar();
   switch (state) {
@@ -30,9 +28,7 @@ void CSnake::paint() {
 
 void CSnake::paintLevelBar() {
   gotoyx(geom.topleft.y - 1, geom.topleft.x);
-  printl("|LEVEL: %d| |STATE: %d| |SIZE: %d| |FOOD POS: %d %d| |TIME: %d|",
-         level, state, snake.size(), foodPos.x, foodPos.y,
-         std::time(nullptr) * 1000 - tic_timer * 1000);
+  printl("|LEVEL: %d|", level);
 }
 
 void CSnake::paintGameScreen() {
@@ -40,8 +36,6 @@ void CSnake::paintGameScreen() {
     for (int x = geom.topleft.x + 1; x < geom.topleft.x + geom.size.x - 1;
          x++) {
       auto begin = snake.cbegin();
-      gotoyx(geom.topleft.y - 2, geom.topleft.x);
-      printl("X Y: %d %d | HEAD X Y: %d %d", x, y, begin->x, begin->y);
       gotoyx(y, x);
       char c = ' ';
       if (foodPos.x == x && foodPos.y == y)
@@ -119,7 +113,6 @@ bool CSnake::handleEvent(int key) {
 
 bool CSnake::handleGameEvent(int key) {
   const int lower_key = tolower(key);
-  old_state = in_game;
   if (lower_key == 'p' || lower_key == 'h') {
     state = game_paused;
     return true;
@@ -131,17 +124,16 @@ bool CSnake::handleGameEvent(int key) {
     state = home_screen;
     return true;
   }
+
   const _direction dir = player_input.empty() ? direction : player_input.back();
-  if ((key == KEY_UP || lower_key == 'w') && direction != down && dir != up) {
+  _direction new_direction = static_cast<_direction>(-1);
+  if ((key == KEY_UP || lower_key == 'w') && dir != down) {
     player_input.push(up);
-  } else if ((key == KEY_DOWN || lower_key == 's') && dir != up &&
-             dir != down) {
+  } else if ((key == KEY_DOWN || lower_key == 's') && dir != up) {
     player_input.push(down);
-  } else if ((key == KEY_LEFT || lower_key == 'a') && dir != right &&
-             dir != left) {
+  } else if ((key == KEY_LEFT || lower_key == 'a') && dir != right) {
     player_input.push(left);
-  } else if ((key == KEY_RIGHT || lower_key == 'd') && dir != left &&
-             dir != right) {
+  } else if ((key == KEY_RIGHT || lower_key == 'd') && dir != left) {
     player_input.push(right);
   }
 
@@ -150,7 +142,6 @@ bool CSnake::handleGameEvent(int key) {
 
 bool CSnake::handleEndGameEvent(int key) {
   const int lower_key = tolower(key);
-  old_state = end_game;
   if (lower_key == 'p' || lower_key == 'h') {
     state = home_screen;
     return true;
@@ -173,7 +164,6 @@ bool CSnake::handleHomeScreenEvent(int key) {
 
 bool CSnake::handlePauseScreenEvent(int key) {
   const int lower_key = tolower(key);
-  old_state = game_paused;
   if (lower_key == 'p' || lower_key == 'h') {
     return resumeGame();
   }
@@ -201,20 +191,36 @@ void CSnake::move(const CPoint &delta) {
  */
 
 bool CSnake::startGame() {
+  std::queue<_direction>().swap(player_input);
   if (!snake.empty())
     snake.clear();
   for (size_t i = 2; i < 5; i++) {
     snake.push_front(CPoint(geom.topleft.x + i, geom.topleft.y + 2));
   }
   direction = right;
-  tic_timer = std::time(nullptr);
   generateFood();
+  level = 1;
+  foodForNextLevel = 3;
+  foodCount = 0;
+  tic_timer = std::chrono::high_resolution_clock::now();
   state = in_game;
   return true;
 }
 
 bool CSnake::ticGame() {
-  if (std::time(nullptr) - tic_timer < 1)
+  auto t2 = std::chrono::high_resolution_clock::now();
+  auto elapsed_time =
+      std::chrono::duration_cast<std::chrono::milliseconds>(t2 - tic_timer)
+          .count();
+  auto x = std::chrono::milliseconds(310).count();
+  auto y = std::chrono::milliseconds(
+               multiplier * level >= 300 ? 300 : multiplier * level)
+               .count();
+  gotoyx(0, 0);
+  printl("|%d %d %d|", elapsed_time, x - y, KEY_DOWN);
+  bool boost =
+      !player_input.empty() && player_input.front() == direction ? true : false;
+  if (elapsed_time < x - y && !boost)
     return false;
 
   auto head = snake.begin();
@@ -262,28 +268,30 @@ bool CSnake::ticGame() {
   }
 
   // we have next pos of head here
-  if (new_pos.x == foodPos.x && new_pos.y == foodPos.y) {
+  if (new_pos == foodPos) {
     snake.push_front(new_pos);
     generateFood();
+    if (++foodCount == foodForNextLevel) {
+      level++;
+      foodCount = 0;
+      if (level % 2 == 0)
+        foodForNextLevel++;
+    }
     return ticGame();
   } else {
     std::swap(*head, new_pos);
   }
 
-  // move tail
+  // move tail and check colision with tail
   for (auto it = std::next(head); it != snake.end(); it++) {
     std::swap(*it, new_pos);
-  }
-
-  // check end game
-  for (auto it = std::next(head); it != snake.cend(); it++) {
-    if (head->x == it->x && head->y == it->y) {
+    if (*head == *it) {
       state = end_game;
       return true;
     }
   }
 
-  tic_timer = std::time(nullptr);
+  tic_timer = std::chrono::high_resolution_clock::now();
   return true;
 }
 
@@ -300,7 +308,7 @@ gen:
   new_pos.y = std::uniform_int_distribution<int>{
       geom.topleft.y + 1, geom.topleft.y + geom.size.y - 2}(generator);
   for (auto it = snake.cbegin(); it != snake.cend(); it++) {
-    if (it->x == new_pos.x && it->y == new_pos.y)
+    if (new_pos == *it)
       goto gen;
   }
   foodPos = new_pos;

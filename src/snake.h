@@ -6,7 +6,6 @@
 #include <queue>
 #include <list>
 #include <cmath>
-#include <ctime>
 #include <random>
 #include <iterator>
 #include <chrono>
@@ -23,17 +22,19 @@ class CSnake:public CFramedWindow
 		end_game,
 	};
 	enum _direction {
-		stop = 0,
-		left,
+		left = 0,
 		right,
 		up,
 		down,
 	};
 	
+	
+	const char multiplier = 10;
+	size_t foodForNextLevel = 3;
+	size_t foodCount = 0;
 	size_t level = 1;
-	_states old_state = home_screen;
 	_states state = home_screen;
-	_direction direction = stop;
+	_direction direction = right;
 	CPoint foodPos;
 	
 	//random
@@ -46,7 +47,7 @@ class CSnake:public CFramedWindow
 	std::queue<_direction> player_input;
 	
 	//timer for ticGame
-	std::time_t tic_timer;
+	std::chrono::high_resolution_clock::time_point tic_timer;
 	
 	//screens
 	void paintLevelBar();
@@ -67,7 +68,6 @@ class CSnake:public CFramedWindow
 	bool ticGame();
 	bool resumeGame();
 	void generateFood();
-	
 public:
   CSnake(CRect r, char _c = ' ') : CFramedWindow(r, _c) {};
   void paint();
